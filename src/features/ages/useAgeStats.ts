@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { Individual } from "@core/domain";
-import { calculateAgeAtEvent } from "@core/domain";
+import { ageInYears } from "@core/domain";
 import { isMale, isFemale } from "./genderUtils";
 
 export type AgeBin = {
@@ -39,9 +39,8 @@ export function useAgeStats(
 
       // We only include in age arrays if they have both birth+death dates
       if (ind.dateOfBirth && ind.dateOfDeath) {
-        const ageStr = calculateAgeAtEvent(ind.dateOfBirth, ind.dateOfDeath);
-        const num = Number(ageStr?.replace(/[^\d]/g, ""));
-        if (isNaN(num)) continue;
+        const num = ageInYears(ind.dateOfBirth, ind.dateOfDeath);
+        if (num == null) continue;
 
         if (isMale(gender)) {
           males.push(num);
