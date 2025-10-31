@@ -10,23 +10,15 @@ jest.mock("../useAddChild", () => ({
   useAddChild: jest.fn(),
 }));
 
-// 3. Partially mock @core so we can:
-//    - control canAddParentChild (cycle detection / validity)
-//    - control IndividualSchema.safeParse (form validation)
-//    We keep the rest of @core's real exports intact.
+// 3. Partially mock @core:
+//    - Keep REAL types/exports to avoid TS issues.
+//    - Override canAddParentChild only.
+//    - Do NOT replace IndividualSchema; we'll spy on safeParse below.
 jest.mock("@core/domain", () => {
   const actual = jest.requireActual("@core/domain");
-
   return {
     ...actual,
-
-    // mockable relationship rule used in useAddChildFlow.validateNoCycles
-    canAddParentChild: jest.fn(),
-
-    // mockable zod schema
-    IndividualSchema: {
-      safeParse: jest.fn(),
-    },
+    canAddParentChild: jest.fn(actual.canAddParentChild),
   };
 });
 
@@ -43,14 +35,12 @@ const { useAddChild } = require("../useAddChild") as {
   useAddChild: jest.Mock;
 };
 
-const {
-  canAddParentChild,
-  IndividualSchema,
-} = require("@core/domain") as {
-  canAddParentChild: jest.Mock;
-  IndividualSchema: { safeParse: jest.Mock };
-};
 
+// Pull real module; we mocked only canAddParentChild above.
+const core = require("@core/domain") as typeof import("@core/domain");
+const canAddParentChild = core.canAddParentChild as unknown as jest.Mock;
+// We'll spy on the REAL schema method instead of replacing the object.
+let safeParseSpy: jest.SpyInstance;
 
 describe("useAddChildFlow", () => {
   let addExistingChild: jest.Mock;
@@ -59,7 +49,10 @@ describe("useAddChildFlow", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-
+    // fresh spy each test to avoid leakage between tests
+    if (safeParseSpy) safeParseSpy.mockRestore();
+    safeParseSpy = jest.spyOn(core.IndividualSchema, "safeParse");
+    
     // Default store shape; we invoke the selector with our fake state
     const relationships = [
       { id: "r1", type: "parent-child", parentIds: ["pA"], childId: "cA" },
@@ -88,7 +81,7 @@ describe("useAddChildFlow", () => {
     });
 
     // Default schema success
-    IndividualSchema.safeParse.mockReturnValue({
+    safeParseSpy.mockReturnValue({
       success: true,
       data: {
         givenName: "New",
@@ -149,7 +142,7 @@ describe("useAddChildFlow", () => {
     });
 
     // ensure schema was used
-    expect(IndividualSchema.safeParse).toHaveBeenCalled();
+    expect(safeParseSpy).toHaveBeenCalled();
 
     // created child linked to primary parent
     expect(addNewChild).toHaveBeenCalledWith(
@@ -176,7 +169,7 @@ describe("useAddChildFlow", () => {
   });
 
   test("createAndLink throws when schema fails before any creation", async () => {
-    IndividualSchema.safeParse.mockReturnValueOnce({ success: false });
+    safeParseSpy.mockReturnValueOnce({ success: false });
 
     const { result } = renderHook(() => useAddChildFlow());
 

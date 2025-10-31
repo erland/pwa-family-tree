@@ -10,30 +10,14 @@ jest.mock("../useAddParent", () => ({
   useAddParent: jest.fn(),
 }));
 
-// We'll mock @core because useAddParentFlow imports these at runtime:
-const coreMocks: {
-  canAddParentChild: jest.Mock<{ ok: boolean }, [any, string, string]>;
-  IndividualSchema: {
-    safeParse: jest.Mock<any, any>;
-  };
-} = {
-  canAddParentChild: jest.fn(),
-  IndividualSchema: {
-    safeParse: jest.fn(),
-  },
-};
-
-// We must not use ...args spreads with ts-jest complaining, so explicit params:
+// Partially mock @core/domain:
+// - keep REAL types/exports (avoids TS errors in relationshipsSlice)
+// - override canAddParentChild only; we'll spy on IndividualSchema.safeParse
 jest.mock("@core/domain", () => {
   const actual = jest.requireActual("@core/domain");
   return {
     ...actual,
-    canAddParentChild: (rels: any, pid: string, cid: string) =>
-      coreMocks.canAddParentChild(rels, pid, cid),
-    IndividualSchema: {
-      safeParse: (candidate: any) =>
-        coreMocks.IndividualSchema.safeParse(candidate),
-    },
+    canAddParentChild: jest.fn(actual.canAddParentChild),
   };
 });
 
@@ -49,6 +33,11 @@ const { useAddParent } = require("../useAddParent") as {
   useAddParent: jest.Mock;
 };
 
+// Access the (partially) mocked core module
+const core = require("@core/domain") as typeof import("@core/domain");
+const canAddParentChild = core.canAddParentChild as unknown as jest.Mock;
+let safeParseSpy: jest.SpyInstance;
+
 describe("useAddParentFlow", () => {
   let addExistingParent: jest.Mock;
   let addNewParent: jest.Mock;
@@ -56,7 +45,9 @@ describe("useAddParentFlow", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-
+    if (safeParseSpy) safeParseSpy.mockRestore();
+    safeParseSpy = jest.spyOn(core.IndividualSchema, "safeParse");
+  
     // Pretend this is what's in Redux
     const relationships = [
       { id: "rel1", type: "parent-child", parentIds: ["p1"], childId: "c1" },
@@ -70,14 +61,14 @@ describe("useAddParentFlow", () => {
     );
 
     // Default: cycle check passes for any pid/cid
-    coreMocks.canAddParentChild.mockReset();
-    coreMocks.canAddParentChild.mockImplementation(
+    canAddParentChild.mockReset();
+    canAddParentChild.mockImplementation(
       (_rels: any, _pid: string, _cid: string) => ({ ok: true })
     );
 
     // Default schema validation succeeds
-    coreMocks.IndividualSchema.safeParse.mockReset();
-    coreMocks.IndividualSchema.safeParse.mockReturnValue({
+    safeParseSpy.mockReset();
+    safeParseSpy.mockReturnValue({
       success: true,
       data: {
         givenName: "New",
@@ -136,7 +127,7 @@ describe("useAddParentFlow", () => {
   //
   test("linkExisting throws when any parent would create a cycle", async () => {
     // make parent 'bad' fail the cycle check
-    coreMocks.canAddParentChild.mockImplementation(
+    canAddParentChild.mockImplementation(
       (_rels: any, pid: string, _cid: string) =>
         pid === "bad" ? { ok: false } : { ok: true }
     );
@@ -171,7 +162,7 @@ describe("useAddParentFlow", () => {
     expect(newParentId).toBe("parent-1");
 
     // schema was consulted
-    expect(coreMocks.IndividualSchema.safeParse).toHaveBeenCalled();
+    expect(safeParseSpy).toHaveBeenCalled();
 
     // first parent created+linked via addNewParent
     expect(addNewParent).toHaveBeenCalledWith(
@@ -213,7 +204,7 @@ describe("useAddParentFlow", () => {
   //
   test("createAndLink throws if form fails schema BEFORE creating anything", async () => {
     // next validation fails
-    coreMocks.IndividualSchema.safeParse.mockReturnValueOnce({
+    safeParseSpy.mockReturnValueOnce({
       success: false,
     });
 
@@ -239,7 +230,7 @@ describe("useAddParentFlow", () => {
   //
   test("createAndLink throws if other parent would create cycle (no second link)", async () => {
     // ban pBad: cycle risk
-    coreMocks.canAddParentChild.mockImplementation(
+    canAddParentChild.mockImplementation(
       (_rels: any, pid: string, _cid: string) =>
         pid === "pBad" ? { ok: false } : { ok: true }
     );
