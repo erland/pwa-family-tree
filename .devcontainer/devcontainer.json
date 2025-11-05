@@ -1,5 +1,5 @@
 {
-  "name": "pwa-game-2d-framework",
+  "name": "pwa-family-tree",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
   "features": {
     "ghcr.io/devcontainers/features/git:1": {},
