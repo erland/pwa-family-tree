@@ -31,6 +31,8 @@ jobs:
         run: npm test -- --runInBand
       - name: Build standalone HTML
         run: npm run build:single-html
+      - name: Check packaging script syntax
+        run: node --check scripts/pack-single-html.mjs && node --check scripts/verify-single-html.mjs
       - name: Verify standalone HTML
         run: node scripts/verify-single-html.mjs dist-single/family-tree.html
       - name: Build GitHub Pages PWA
