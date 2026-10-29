@@ -167,3 +167,27 @@ export async function updateRelationship(id: string, updates: any) {
 export async function deleteRelationship(id: string) {
   await remove("relationships", id);
 }
+
+// Import a whole file in one transaction-like localStorage write.
+// Avoid repeatedly parsing/stringifying the entire database per record.
+export async function mergeImportedData(
+  newIndividuals: Individual[],
+  newRelationships: Relationship[]
+): Promise<{ count: number; relCount: number }> {
+  const current = readRaw();
+  const individuals = new Map(current.individuals.map((item) => [item.id, item]));
+  const relationships = new Map(current.relationships.map((item) => [item.id, item]));
+  for (const item of newIndividuals) {
+    individuals.set(item.id, individuals.has(item.id)
+      ? { ...individuals.get(item.id), ...item }
+      : item);
+  }
+  for (const item of newRelationships) {
+    relationships.set(item.id, relationships.has(item.id)
+      ? { ...relationships.get(item.id), ...item }
+      : item);
+  }
+  // Persist only when the entire merged snapshot can be serialized and saved.
+  writeRaw({ individuals: [...individuals.values()], relationships: [...relationships.values()] });
+  return { count: newIndividuals.length, relCount: newRelationships.length };
+}
