@@ -101,9 +101,9 @@ export default function PedigreeTree() {
   }, [currentTypeValues, effectiveCircularGenerations, effectiveOrthMode, vm.layoutKind]);
 
   return (
-    <Box sx={{ width: "100%", height: { xs: "100dvh", md: "calc(100dvh - 120px)" }, display: "flex", flexDirection: { xs: "column", md: "row" }, position: "relative", overflow: "hidden", minHeight: 0 }}>
+    <Box sx={{ width: "100%", height: { xs: "calc(100dvh - 96px)", md: "calc(100dvh - 120px)" }, display: "flex", flexDirection: { xs: "column", md: "row" }, position: "relative", overflow: "hidden", minHeight: 0 }}>
       <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-        <Box sx={{ p: 1, background: "#f5f5f5", display: "flex", flexWrap: "wrap", rowGap: 1, columnGap: 1.5, alignItems: "center", position: "sticky", top: 0, zIndex: 5, borderBottom: "1px solid", borderColor: "divider" }}>
+        <Box sx={{ p: 1, background: "#f5f5f5", display: "flex", flexWrap: "wrap", rowGap: 1, columnGap: 1.5, alignItems: "center", position: "relative", zIndex: 5, borderBottom: "1px solid", borderColor: "divider" }}>
           <Box sx={{ flexGrow: 1, minWidth: 200 }}>
             <SearchBar
               clearOnSelect
@@ -123,7 +123,7 @@ export default function PedigreeTree() {
           />
         </Box>
 
-        <Box sx={{ p: 1, background: "#fff", display: "flex", alignItems: "center", gap: 1.5, borderBottom: "1px dashed", borderColor: "divider", position: "sticky", top: 48, zIndex: 4 }}>
+        <Box sx={{ p: 1, background: "#fff", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.5, borderBottom: "1px dashed", borderColor: "divider", position: "relative", zIndex: 4 }}>
           <SchemaToolbar
             treeTypeId={vm.layoutKind}
             size="small"
@@ -133,14 +133,14 @@ export default function PedigreeTree() {
         </Box>
 
         {hasRoot && vm.root && (
-          <Box sx={{ p: 1, background: "#f5f5f5", display: "flex", flexWrap: "wrap", rowGap: 1, columnGap: 1.5, alignItems: "center", position: "sticky", top: 96, zIndex: 3, borderBottom: "1px solid", borderColor: "divider" }}>
+          <Box sx={{ p: 1, background: "#f5f5f5", display: "flex", flexWrap: "wrap", rowGap: 1, columnGap: 1.5, alignItems: "center", position: "relative", zIndex: 3, borderBottom: "1px solid", borderColor: "divider" }}>
             <Typography variant="body2" sx={{ maxWidth: "100%", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
               Rot: {vm.root.firstName} {vm.root.lastName}
             </Typography>
-            <Button variant="outlined" size="small" onClick={() => vm.setRoot(null)}>Rensa</Button>
+            <Button variant="outlined" size="small" onClick={() => vm.setRoot(null)}>Byt person</Button>
             <Box sx={{ ml: "auto", display: "flex", gap: 1 }}>
-              <Button variant="outlined" size="small" onClick={vm.handleExportSvg}>SVG</Button>
-              <Button variant="outlined" size="small" onClick={vm.handleExportPdf}>PDF</Button>
+              <Button variant="outlined" size="small" onClick={vm.handleExportSvg} aria-label="Exportera släktträdet som SVG">SVG</Button>
+              <Button variant="outlined" size="small" onClick={vm.handleExportPdf} aria-label="Exportera släktträdet som PDF">PDF</Button>
             </Box>
           </Box>
         )}
