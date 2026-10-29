@@ -12,7 +12,7 @@ for (const device of [
       await page.goto("/#/individuals");
       await page.getByRole("button", { name: "Lägg till person" }).click();
       await page.getByRole("textbox", { name: "Förnamn" }).fill("UXTest");
-      await page.getByRole("textbox", { name: "Efternamn" }).fill("Person");
+      await page.getByRole("textbox", { name: "Efternamn", exact: true }).fill("Person");
       await page.getByRole("button", { name: "Spara", exact: true }).click();
       await expect(page.getByRole("button", { name: "Visa detaljer för UXTest Person" })).toBeVisible();
 
