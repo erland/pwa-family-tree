@@ -1,5 +1,6 @@
 // src/components/PedigreeTree.tsx
 import React from "react";
+import { fullName } from "@core/domain";
 import {
   Box,
   Button,
@@ -135,7 +136,7 @@ export default function PedigreeTree() {
         {hasRoot && vm.root && (
           <Box sx={{ p: 1, background: "#f5f5f5", display: "flex", flexWrap: "wrap", rowGap: 1, columnGap: 1.5, alignItems: "center", position: "relative", zIndex: 3, borderBottom: "1px solid", borderColor: "divider" }}>
             <Typography variant="body2" sx={{ maxWidth: "100%", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
-              Rot: {vm.root.firstName} {vm.root.lastName}
+              Rot: {fullName(vm.root)}
             </Typography>
             <Button variant="outlined" size="small" onClick={() => vm.setRoot(null)}>Byt person</Button>
             <Box sx={{ ml: "auto", display: "flex", gap: 1 }}>
