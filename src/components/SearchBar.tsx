@@ -78,6 +78,7 @@ export default function SearchBar({
     <>
       <TextField
         inputRef={anchorRef}
+        inputProps={{ "data-testid": "person-search-input" }}
         value={query}
         onChange={(e) => {
           const v = e.target.value;
@@ -126,6 +127,7 @@ export default function SearchBar({
                 return (
                   <ListItemButton
                     key={r.item.id}
+                    data-testid={`person-search-result-${r.item.id}`}
                     onClick={() => handleSelectClick(r.item.id)}
                   >
                     <ListItemText primary={primary} secondary={secondary} />
