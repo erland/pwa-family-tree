@@ -91,6 +91,7 @@ export default function SchemaToolbar({
                   <Box key={d.key} sx={{ width: { xs: "100%", sm: 220 }, minWidth: 140, maxWidth: 280 }}>
                     <Typography variant="body2" id={`tree-option-${d.key}`}>{d.label}: {Number(v)}</Typography>
                     <Slider
+                      data-testid={`tree-option-${d.key}`}
                       aria-labelledby={`tree-option-${d.key}`}
                       size={size}
                       value={Number(v)}
@@ -136,7 +137,7 @@ export default function SchemaToolbar({
                       onChange={(_, nv) => nv && handleChange(d.key, nv)}
                     >
                       {d.choices?.map((c) => (
-                        <ToggleButton key={c.value} value={c.value}>
+                        <ToggleButton key={c.value} value={c.value} data-testid={`tree-option-${d.key}-${c.value}`}>
                           {c.label}
                         </ToggleButton>
                       ))}
