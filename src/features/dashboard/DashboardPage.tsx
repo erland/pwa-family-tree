@@ -1,6 +1,6 @@
 import React from "react";
 import { Link as RouterLink } from "react-router-dom";
-import { Box, Button, Typography, Paper, Grid, Stack, Divider } from "@mui/material";
+import { Box, Button, Typography, Paper, Grid, Stack, Divider, Snackbar, Alert, CircularProgress } from "@mui/material";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import DescriptionIcon from "@mui/icons-material/Description";
 import PeopleIcon from "@mui/icons-material/People";
@@ -13,7 +13,7 @@ import { ResetDatabaseButton } from "../../components/ResetDatabaseButton";
 
 export default function DashboardPage() {
   const {
-    individualCount, marriageCount, familyCount,
+    individualCount, marriageCount, familyCount, notice, busy, dismissNotice,
     handleImportExcel, handleImportGedcom,
     handleExportExcel, handleExportGedcom, handleResetDatabase,
   } = useDashboardViewModel();
@@ -34,10 +34,10 @@ export default function DashboardPage() {
             <Button component={RouterLink} to="/individuals" variant="contained" startIcon={<PersonAddIcon />}>
               Lägg till första personen
             </Button>
-            <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={handleImportGedcom}>
+            <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={handleImportGedcom} disabled={busy}>
               Importera GEDCOM
             </Button>
-            <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={handleImportExcel}>
+            <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={handleImportExcel} disabled={busy}>
               Importera Excel
             </Button>
           </Stack>
@@ -90,19 +90,23 @@ export default function DashboardPage() {
           )}
           {!isEmpty && (
             <>
-              <Button variant="outlined" startIcon={<DescriptionIcon />} onClick={handleExportGedcom}>Exportera GEDCOM</Button>
-              <Button variant="outlined" startIcon={<DescriptionIcon />} onClick={handleExportExcel}>Exportera Excel</Button>
+              <Button variant="outlined" startIcon={<DescriptionIcon />} onClick={handleExportGedcom} disabled={busy}>Exportera GEDCOM</Button>
+              <Button variant="outlined" startIcon={<DescriptionIcon />} onClick={handleExportExcel} disabled={busy}>Exportera Excel</Button>
             </>
           )}
           {isEmpty && <Typography variant="body2" color="text.secondary">Importera ovan, eller skapa en person för att komma igång.</Typography>}
         </Stack>
       </Paper>
+      {busy && <Box role="status" sx={{ display: "flex", alignItems: "center", gap: 1 }}><CircularProgress size={18} /> Bearbetar fil…</Box>}
       {!isEmpty && (
         <Box sx={{ alignSelf: "flex-start" }}>
           <Divider sx={{ mb: 2 }} />
-          <ResetDatabaseButton onConfirm={handleResetDatabase} />
+          <ResetDatabaseButton onConfirm={handleResetDatabase} onExport={handleExportGedcom} disabled={busy} />
         </Box>
       )}
+      <Snackbar open={!!notice} autoHideDuration={notice?.severity === "error" ? 10000 : 5000} onClose={dismissNotice} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
+        <Alert severity={notice?.severity ?? "success"} onClose={dismissNotice} variant="filled" sx={{ width: "100%" }} role="alert">{notice?.message}</Alert>
+      </Snackbar>
     </Box>
   );
 }
