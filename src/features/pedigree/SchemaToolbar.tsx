@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import {
   Box,
   Typography,
-  Divider,
   Switch,
   Slider,
   Select,
@@ -64,22 +63,22 @@ export default function SchemaToolbar({
   ];
 
   return (
-    <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "center" }}>
+    <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap", alignItems: "center", width: "100%" }}>
       {groups.map((group, idx) => {
         const items = defs.filter((d) => (d.group ?? "layout") === group);
         if (!items.length) return null;
 
         return (
           <Box key={group} sx={{ display: "flex", alignItems: "center", gap: 1.25, flexWrap: "wrap" }}>
-            {idx > 0 && <Divider orientation="vertical" flexItem />}
+            
             {items.map((d) => {
               const v = values[d.key];
 
               if (d.type === "toggle") {
                 return (
                   <Box key={d.key} sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                    <Typography variant="body2">{d.label}</Typography>
-                    <Switch size={size} checked={!!v} onChange={(e) => handleChange(d.key, e.target.checked)} />
+                    <Typography variant="body2" id={`tree-option-${d.key}`}>{d.label}</Typography>
+                    <Switch inputProps={{ "aria-labelledby": `tree-option-${d.key}` }} size={size} checked={!!v} onChange={(e) => handleChange(d.key, e.target.checked)} />
                   </Box>
                 );
               }
@@ -89,16 +88,17 @@ export default function SchemaToolbar({
                 const max = d.max ?? 400;
                 const step = d.step ?? 1;
                 return (
-                  <Box key={d.key} sx={{ width: 220 }}>
-                    <Typography variant="body2">{d.label}</Typography>
+                  <Box key={d.key} sx={{ width: { xs: "100%", sm: 220 }, minWidth: 140, maxWidth: 280 }}>
+                    <Typography variant="body2" id={`tree-option-${d.key}`}>{d.label}: {Number(v)}</Typography>
                     <Slider
+                      aria-labelledby={`tree-option-${d.key}`}
                       size={size}
                       value={Number(v)}
                       onChange={(_, nv) => handleChange(d.key, nv as number)}
                       min={min}
                       max={max}
                       step={step}
-                      marks
+                      valueLabelDisplay="auto"
                     />
                   </Box>
                 );
@@ -111,6 +111,7 @@ export default function SchemaToolbar({
                     <Select
                       size={size}
                       value={v}
+                      inputProps={{ "aria-label": d.label }}
                       onChange={(e) => handleChange(d.key, e.target.value)}
                     >
                       {d.choices?.map((c) => (
@@ -129,6 +130,7 @@ export default function SchemaToolbar({
                     <Typography variant="body2">{d.label}</Typography>
                     <ToggleButtonGroup
                       exclusive
+                      aria-label={d.label}
                       size={size}
                       value={v}
                       onChange={(_, nv) => nv && handleChange(d.key, nv)}
