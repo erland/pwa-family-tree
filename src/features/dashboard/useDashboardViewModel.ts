@@ -1,5 +1,5 @@
 // src/hooks/useDashboardViewModel.ts
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../store";
 import {
   fetchIndividuals,
@@ -29,45 +29,63 @@ export function useDashboardViewModel() {
     return buildDashboardStats(individuals, relationships);
   }, [individuals, relationships]);
 
-  // IMPORT: Excel
-  const handleImportExcel = useCallback(async () => {
-    const result = await (window as any).api.importExcel?.();
-    if (result) {
-      alert(
-        `Importerade ${result.count} personer och ${result.relCount} relationer.`
-      );
-      await dispatch(fetchIndividuals());
-      await dispatch(fetchRelationships());
+  const [notice, setNotice] = useState<{ message: string; severity: "success" | "error" } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const dismissNotice = useCallback(() => setNotice(null), []);
+
+  const runOperation = useCallback(async (
+    operation: () => Promise<any>,
+    successMessage: (result: any) => string,
+    afterSuccess?: () => Promise<void>
+  ) => {
+    if (busy) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      const result = await operation();
+      // Cancelling a file picker is not an error.
+      if (result == null) return;
+      if (result.success === false) throw new Error("Åtgärden kunde inte slutföras.");
+      if (afterSuccess) await afterSuccess();
+      setNotice({ message: successMessage(result), severity: "success" });
+    } catch (error) {
+      setNotice({
+        message: error instanceof Error && error.message
+          ? `Åtgärden misslyckades: ${error.message}`
+          : "Åtgärden misslyckades. Försök igen.",
+        severity: "error",
+      });
+    } finally {
+      setBusy(false);
     }
+  }, [busy]);
+
+  const refresh = useCallback(async () => {
+    await dispatch(fetchIndividuals());
+    await dispatch(fetchRelationships());
   }, [dispatch]);
 
-  // IMPORT: GEDCOM
-  const handleImportGedcom = useCallback(async () => {
-    const result = await (window as any).api.importGedcom?.();
-    if (result) {
-      alert(
-        `Importerade ${result.count} personer och ${result.relCount} relationer.`
-      );
-      await dispatch(fetchIndividuals());
-      await dispatch(fetchRelationships());
-    }
-  }, [dispatch]);
+  const handleImportExcel = useCallback(() => runOperation(
+    () => (window as any).api.importExcel(),
+    (result) => `Importerade ${result.count} personer och ${result.relCount} relationer.`,
+    refresh
+  ), [runOperation, refresh]);
 
-  // EXPORT: Excel
-  const handleExportExcel = useCallback(async () => {
-    const res = await (window as any).api.exportIndividualsExcel?.();
-    if (res?.success) {
-      alert("Excel-export klar!");
-    }
-  }, []);
+  const handleImportGedcom = useCallback(() => runOperation(
+    () => (window as any).api.importGedcom(),
+    (result) => `Importerade ${result.count} personer och ${result.relCount} relationer.`,
+    refresh
+  ), [runOperation, refresh]);
 
-  // EXPORT: GEDCOM
-  const handleExportGedcom = useCallback(async () => {
-    const res = await (window as any).api.exportGedcom?.();
-    if (res?.success) {
-      alert("GEDCOM-export klar!");
-    }
-  }, []);
+  const handleExportExcel = useCallback(() => runOperation(
+    () => (window as any).api.exportIndividualsExcel(),
+    () => "Excel-export klar!"
+  ), [runOperation]);
+
+  const handleExportGedcom = useCallback(() => runOperation(
+    () => (window as any).api.exportGedcom(),
+    () => "GEDCOM-export klar!"
+  ), [runOperation]);
 
   // DB RESET helper (used by ResetDatabaseButton)
   const handleResetDatabase = useCallback(async () => {
@@ -83,6 +101,7 @@ export function useDashboardViewModel() {
   }, [dispatch]);
 
   return {
+    notice, busy, dismissNotice,
     // stats for UI
     individualCount,
     marriageCount,
