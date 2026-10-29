@@ -139,11 +139,12 @@ export default function IndividualsPage() {
           onClick={() => handleOpen()}
           size={isSmall ? "small" : "medium"}
         >
-          Ny
+          Lägg till person
         </Button>
 
         <Tooltip title="Exportera alla till PDF">
           <IconButton
+            aria-label="Exportera alla personer till PDF"
             onClick={() =>
               exportAllIndividualsPdf(individuals, relationships)
             }
@@ -183,12 +184,13 @@ export default function IndividualsPage() {
               </TableRow>
             </TableHead>
             <TableBody>
+              {visibleIndividuals.length === 0 && <TableRow><TableCell colSpan={isSmall ? 2 : 4}><Box sx={{ py: 3, textAlign: "center" }}><Typography variant="body1">{searchQuery ? "Inga personer matchar sökningen." : "Inga personer registrerade ännu."}</Typography><Button sx={{ mt: 1 }} onClick={searchQuery ? () => setSearchQuery("") : () => handleOpen()}>{searchQuery ? "Visa alla personer" : "Lägg till första personen"}</Button></Box></TableCell></TableRow>}
               {visibleIndividuals.map((ind) => (
                 <TableRow
                   key={ind.id}
                   hover
-                  onClick={() => setSelected(ind)}
-                  style={{ cursor: "pointer" }}
+                  selected={selected?.id === ind.id}
+                  sx={{ cursor: "pointer" }}
                 >
                   <TableCell
                     sx={{
@@ -198,7 +200,7 @@ export default function IndividualsPage() {
                       overflow: "hidden",
                     }}
                   >
-                    {fullName(ind)}
+                    <Button variant="text" onClick={() => setSelected(ind)} sx={{ textTransform: "none", justifyContent: "flex-start", p: 0, textAlign: "left", fontWeight: 500 }} aria-label={`Visa detaljer för ${fullName(ind)}`}>{fullName(ind)}</Button>
                     {isSmall && (
                       <Typography
                         variant="caption"
@@ -225,6 +227,7 @@ export default function IndividualsPage() {
                   <TableCell sx={{ whiteSpace: "nowrap" }}>
                     <IconButton
                       size={isSmall ? "small" : "medium"}
+                      aria-label={`Redigera ${fullName(ind)}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleOpen(ind);
@@ -234,6 +237,7 @@ export default function IndividualsPage() {
                     </IconButton>
                     <IconButton
                       size={isSmall ? "small" : "medium"}
+                      aria-label={`Ta bort ${fullName(ind)}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         askDelete(ind);
