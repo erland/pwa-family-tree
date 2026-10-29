@@ -37,6 +37,12 @@ export default function IndividualsPage() {
   const relationships = useAppSelector((s) => s.relationships.items);
   const [filteredIds, setFilteredIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchResetKey, setSearchResetKey] = useState(0);
+  const clearSearch = () => {
+    setSearchQuery("");
+    setFilteredIds([]);
+    setSearchResetKey((current) => current + 1);
+  };
 
   const visibleIndividuals =
     searchQuery.length === 0
@@ -127,6 +133,7 @@ export default function IndividualsPage() {
       >
         <Box sx={{ flexGrow: 1, minWidth: 220 }}>
           <SearchBar
+            key={searchResetKey}
             onResults={setFilteredIds}
             onQueryChange={setSearchQuery}
             showDropdown={false}
@@ -184,7 +191,7 @@ export default function IndividualsPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {visibleIndividuals.length === 0 && <TableRow><TableCell colSpan={isSmall ? 2 : 4}><Box sx={{ py: 3, textAlign: "center" }}><Typography variant="body1">{searchQuery ? "Inga personer matchar sökningen." : "Inga personer registrerade ännu."}</Typography><Button sx={{ mt: 1 }} onClick={searchQuery ? () => setSearchQuery("") : () => handleOpen()}>{searchQuery ? "Visa alla personer" : "Lägg till första personen"}</Button></Box></TableCell></TableRow>}
+              {visibleIndividuals.length === 0 && <TableRow><TableCell colSpan={isSmall ? 2 : 4}><Box sx={{ py: 3, textAlign: "center" }}><Typography variant="body1">{searchQuery ? "Inga personer matchar sökningen." : "Inga personer registrerade ännu."}</Typography><Button sx={{ mt: 1 }} onClick={searchQuery ? clearSearch : () => handleOpen()}>{searchQuery ? "Visa alla personer" : "Lägg till första personen"}</Button></Box></TableCell></TableRow>}
               {visibleIndividuals.map((ind) => (
                 <TableRow
                   key={ind.id}
