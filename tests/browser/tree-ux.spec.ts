@@ -29,9 +29,11 @@ for (const device of [
       await expect(page.getByTestId("tree-type-orthogonal")).toHaveAttribute("aria-pressed", "true");
       await page.getByTestId("tree-option-mode-descendants").click();
       await expect(page.getByTestId("tree-option-mode-descendants")).toHaveAttribute("aria-pressed", "true");
-      await page.getByTestId("tree-option-maxGenerations").focus();
-      await page.keyboard.press("ArrowRight");
-      await expect(page.getByText(/Antal generationer: [4-9]/)).toBeVisible();
+      const generations = page.getByRole("slider", { name: /Antal generationer/ });
+      await expect(generations).toHaveAttribute("aria-valuenow", "3");
+      await generations.focus();
+      await generations.press("ArrowRight");
+      await expect(generations).toHaveAttribute("aria-valuenow", "4");
       const size = await page.getByTestId("tree-canvas-container").boundingBox();
       expect(size).not.toBeNull();
       expect(size!.height).toBeGreaterThan(100);
