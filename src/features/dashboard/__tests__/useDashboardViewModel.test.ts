@@ -110,9 +110,7 @@ describe("useDashboardViewModel (thin hook adapter + actions)", () => {
     });
 
     expect((window as any).api.importExcel).toHaveBeenCalled();
-    expect(global.alert).toHaveBeenCalledWith(
-      "Importerade 10 personer och 5 relationer."
-    );
+    expect(result.current.notice).toEqual({ message: "Importerade 10 personer och 5 relationer.", severity: "success" });
 
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "individuals/fetch" });
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "relationships/fetch" });
@@ -131,9 +129,7 @@ describe("useDashboardViewModel (thin hook adapter + actions)", () => {
     });
 
     expect((window as any).api.importGedcom).toHaveBeenCalled();
-    expect(global.alert).toHaveBeenCalledWith(
-      "Importerade 3 personer och 2 relationer."
-    );
+    expect(result.current.notice).toEqual({ message: "Importerade 3 personer och 2 relationer.", severity: "success" });
 
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "individuals/fetch" });
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "relationships/fetch" });
@@ -151,7 +147,7 @@ describe("useDashboardViewModel (thin hook adapter + actions)", () => {
     });
 
     expect((window as any).api.exportIndividualsExcel).toHaveBeenCalled();
-    expect(global.alert).toHaveBeenCalledWith("Excel-export klar!");
+    expect(result.current.notice).toEqual({ message: "Excel-export klar!", severity: "success" });
   });
 
   it("handleExportGedcom calls exportGedcom and alerts on success", async () => {
@@ -166,7 +162,22 @@ describe("useDashboardViewModel (thin hook adapter + actions)", () => {
     });
 
     expect((window as any).api.exportGedcom).toHaveBeenCalled();
-    expect(global.alert).toHaveBeenCalledWith("GEDCOM-export klar!");
+    expect(result.current.notice).toEqual({ message: "GEDCOM-export klar!", severity: "success" });
+  });
+
+  it("reports failed import without showing a success notification", async () => {
+    (window as any).api.importGedcom.mockRejectedValue(new Error("Ogiltig fil"));
+    const { result } = renderHook(() => useDashboardViewModel());
+    await act(async () => { await result.current.handleImportGedcom(); });
+    expect(result.current.notice).toEqual({ message: "Åtgärden misslyckades: Ogiltig fil", severity: "error" });
+    expect(result.current.busy).toBe(false);
+  });
+
+  it("treats cancelled file selection as neither success nor failure", async () => {
+    (window as any).api.importExcel.mockResolvedValue(null);
+    const { result } = renderHook(() => useDashboardViewModel());
+    await act(async () => { await result.current.handleImportExcel(); });
+    expect(result.current.notice).toBeNull();
   });
 
   it("handleResetDatabase wipes DB, clears redux, and reloads", async () => {
