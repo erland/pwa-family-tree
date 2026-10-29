@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => {
   // Otherwise (dev, normal build) we stick to "./"
   // which is great for offline/local file:// and generic hosting.
   const isGitHubPages = process.env.GITHUB_PAGES === "true";
+  const isSingleHtml = process.env.SINGLE_HTML === "true";
 
   return {
     base: isGitHubPages ? "/pwa-family-tree/" : "./",
@@ -70,7 +71,12 @@ export default defineConfig(({ mode }) => {
     },
 
     build: {
-      outDir: "dist",
+      outDir: isSingleHtml ? "dist-single" : "dist",
+      assetsInlineLimit: isSingleHtml ? 100_000_000 : 4096,
+      cssCodeSplit: !isSingleHtml,
+      rollupOptions: isSingleHtml ? {
+        output: { inlineDynamicImports: true, manualChunks: undefined },
+      } : undefined,
       chunkSizeWarningLimit: 1500,
     },
   };
