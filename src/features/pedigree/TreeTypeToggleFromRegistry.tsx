@@ -24,7 +24,7 @@ export default function TreeTypeToggleFromRegistry({
       onChange={(_, v) => v && onChange(v)}
     >
       {types.map((tt) => (
-        <ToggleButton key={tt.id} value={tt.id}>
+        <ToggleButton key={tt.id} value={tt.id} data-testid={`tree-type-${tt.id}`}>
           {tt.label}
         </ToggleButton>
       ))}
