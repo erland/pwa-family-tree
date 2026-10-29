@@ -1,37 +1,97 @@
-name: Deploy PWA to GitHub Pages
+name: Release Family Tree
 
 on:
-  push:
-    branches:
-      - main  # or whatever your default branch is
+  release:
+    types: [published]
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
+
+concurrency:
+  group: family-tree-release-deploy
+  cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  build:
+    if: ${{ !github.event.release.draft }}
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: read
     steps:
-      - name: Checkout
+      - name: Checkout exact release tag
         uses: actions/checkout@v4
-
-      - name: Use Node
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
+      - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '22'
           cache: npm
+      - run: npm ci
+      - run: npm test -- --runInBand
+      - name: Build single HTML
+        run: npm run build:single-html
+      - name: Check standalone artifact
+        run: node scripts/verify-single-html.mjs dist-single/family-tree.html
+      - name: Upload single HTML build
+        uses: actions/upload-artifact@v4
+        with:
+          name: standalone-html
+          path: dist-single/family-tree.html
+          if-no-files-found: error
+      - name: Build GitHub Pages
+        if: ${{ !github.event.release.prerelease }}
+        run: npm run build:gh
+      - name: Upload Pages build
+        if: ${{ !github.event.release.prerelease }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pages-site
+          path: dist/
+          if-no-files-found: error
 
-      - name: Install deps
-        run: npm ci
-
-      - name: Build for GitHub Pages
+  publish-html:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: standalone-html
+          path: release-files
+      - name: Attach HTML to release
         env:
-          GITHUB_PAGES: "true"
-        run: npm run build
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          mv release-files/family-tree.html "family-tree-${RELEASE_TAG}.html"
+          gh release upload "$RELEASE_TAG" "family-tree-${RELEASE_TAG}.html" --clobber
 
+  deploy-pages:
+    if: ${{ !github.event.release.prerelease }}
+    needs: [build, publish-html]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Ensure release is latest stable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          LATEST="$(gh api "repos/${GH_REPO}/releases/latest" --jq .tag_name)"
+          test "$LATEST" = "$RELEASE_TAG" || {
+            echo "Skipping outdated release: $RELEASE_TAG (latest: $LATEST)"
+            exit 1
+          }
+      - uses: actions/download-artifact@v4
+        with:
+          name: pages-site
+          path: dist
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:
