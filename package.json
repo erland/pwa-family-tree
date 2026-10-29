@@ -13,7 +13,8 @@
     "test": "jest --passWithNoTests",
     "test:coverage": "jest --coverage",
     "build:gh": "GITHUB_PAGES=true vite build",
-    "deploy": "npm run build:gh && gh-pages -d dist -b gh-pages"
+    "deploy": "npm run build:gh && gh-pages -d dist -b gh-pages",
+    "build:single-html": "SINGLE_HTML=true VITE_SINGLE_HTML=true vite build && node scripts/pack-single-html.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",
