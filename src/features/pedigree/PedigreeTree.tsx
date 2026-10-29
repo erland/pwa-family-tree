@@ -1,5 +1,6 @@
 // src/components/PedigreeTree.tsx
 import React from "react";
+import { fullName } from "@core/domain";
 import {
   Box,
   Button,
@@ -101,7 +102,7 @@ export default function PedigreeTree() {
   }, [currentTypeValues, effectiveCircularGenerations, effectiveOrthMode, vm.layoutKind]);
 
   return (
-    <Box sx={{ width: "100%", height: { xs: "calc(100dvh - 96px)", md: "calc(100dvh - 120px)" }, display: "flex", flexDirection: { xs: "column", md: "row" }, position: "relative", overflow: "hidden", minHeight: 0 }}>
+    <Box data-testid="tree-page" sx={{ width: "100%", height: { xs: "calc(100dvh - 96px)", md: "calc(100dvh - 120px)" }, display: "flex", flexDirection: { xs: "column", md: "row" }, position: "relative", overflow: "hidden", minHeight: 0 }}>
       <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         <Box sx={{ p: 1, background: "#f5f5f5", display: "flex", flexWrap: "wrap", rowGap: 1, columnGap: 1.5, alignItems: "center", position: "relative", zIndex: 5, borderBottom: "1px solid", borderColor: "divider" }}>
           <Box sx={{ flexGrow: 1, minWidth: 200 }}>
@@ -135,7 +136,7 @@ export default function PedigreeTree() {
         {hasRoot && vm.root && (
           <Box sx={{ p: 1, background: "#f5f5f5", display: "flex", flexWrap: "wrap", rowGap: 1, columnGap: 1.5, alignItems: "center", position: "relative", zIndex: 3, borderBottom: "1px solid", borderColor: "divider" }}>
             <Typography variant="body2" sx={{ maxWidth: "100%", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
-              Rot: {vm.root.firstName} {vm.root.lastName}
+              Rot: {fullName(vm.root)}
             </Typography>
             <Button variant="outlined" size="small" onClick={() => vm.setRoot(null)}>Byt person</Button>
             <Box sx={{ ml: "auto", display: "flex", gap: 1 }}>
@@ -146,10 +147,10 @@ export default function PedigreeTree() {
         )}
 
         <LayoutOptionsProvider treeTypeId={vm.layoutKind} values={resolvedOptionsForContext}>
-          <Box sx={{ flexGrow: 1, minHeight: 0, height: 1, overflow: "hidden" }}>
+          <Box data-testid="tree-canvas-container" sx={{ flexGrow: 1, minHeight: 0, height: 1, overflow: "hidden" }}>
             {!hasRoot ? (
               <Box sx={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", px: 2, textAlign: "center", color: "text.secondary" }}>
-                <Typography variant="body1">Sök och välj en person för att visa trädet.</Typography>
+                <Typography variant="body1" data-testid="tree-empty-message">Sök och välj en person för att visa trädet.</Typography>
               </Box>
             ) : vm.layoutKind === "circular" ? (
               <CircularPedigree key={circularKey} rootId={vm.root!.id} generations={effectiveCircularGenerations} />
