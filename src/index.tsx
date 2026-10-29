@@ -62,7 +62,7 @@ const router = createHashRouter([
   // 3. Register PWA service worker for offline/app-shell caching.
   //    immediate: true = register right now
   //    onOfflineReady = hook for telling the user "ready to use offline"
-  registerSW({
+  if (!import.meta.env.VITE_SINGLE_HTML) registerSW({
     immediate: true,
     onOfflineReady() {
       // You can replace this with a Snackbar/Toast later
