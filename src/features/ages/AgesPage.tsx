@@ -4,13 +4,12 @@ import React, { useMemo, useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { useAppSelector } from "../../store";
 import { Individual } from "@core/domain";
-import { calculateAgeAtEvent } from "@core/domain";
 
 import { useAgeStats } from "./useAgeStats";
 import { AgeStatsSummary } from "./AgeStatsSummary";
 import { AgeHistogram } from "./AgeHistogram";
 import { AgeBucketPeopleList } from "./AgeBucketPeopleList";
-import { genderMatchesFilter } from "./genderUtils";
+import { peopleInAgeRange } from "./logic";
 
 // Reuse your existing dialogs/components
 import IndividualDetails from "../individuals/IndividualDetails";
@@ -50,35 +49,18 @@ export default function AgesPage() {
   // Compute stats for chart + avg/median/etc.
   const { ageData, average, median } = useAgeStats(individuals, genderFilter);
 
-  // Derive which people to show for the currently selected bin
-  const peopleInRange = useMemo(() => {
-    if (showUnknown) {
-      // people with missing birth OR missing death, matching gender filter
-      return individuals.filter(
-        (ind) =>
-          (!ind.dateOfBirth || !ind.dateOfDeath) &&
-          genderMatchesFilter(ind.gender || "", genderFilter)
-      );
-    }
-
-    if (!selectedRange) return [];
-
-    const [min, max] = selectedRange;
-    return individuals.filter((ind) => {
-      if (!ind.dateOfBirth || !ind.dateOfDeath) return false;
-
-      const ageStr = calculateAgeAtEvent(ind.dateOfBirth, ind.dateOfDeath);
-      const num = Number(ageStr?.replace(/[^\d]/g, ""));
-      if (isNaN(num)) return false;
-
-      return (
-        num >= min &&
-        num <= max &&
-        genderMatchesFilter(ind.gender || "", genderFilter)
-      );
-    });
-  }, [selectedRange, showUnknown, individuals, genderFilter]);
-
+  // Derive which people to show for the currently selected bin (pure helper)
+  const peopleInRange = useMemo(
+    () =>
+      peopleInAgeRange(
+        individuals,
+        selectedRange,
+        showUnknown,
+        genderFilter
+      ),
+    [individuals, selectedRange, showUnknown, genderFilter]
+  );
+  
   // handle clicks from histogram
   const handleSelectRange = (range: [number, number] | "unknown") => {
     if (range === "unknown") {

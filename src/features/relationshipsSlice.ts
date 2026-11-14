@@ -15,7 +15,7 @@ export const fetchRelationships = createAsyncThunk("relationships/fetchAll", asy
 export const addRelationship = createAsyncThunk(
   "relationships/add",
   async (rel: Omit<Relationship, "id"> & { id?: string }) => {
-    const finalRel: Relationship = { id: rel.id ?? crypto.randomUUID(), ...rel };
+    const finalRel = { id: rel.id ?? crypto.randomUUID(), ...rel } as Relationship;
     return await (window as any).api.addRelationship(finalRel);
   }
 );

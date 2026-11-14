@@ -52,6 +52,20 @@ export function monthsBetween(a: Date, b: Date): number {
   return (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + (b.getUTCMonth() - a.getUTCMonth());
 }
 
+/**
+ * Pure numeric age in whole years (floor), or null if inputs are missing/invalid
+ * or if the event precedes birth.
+ */
+export function ageInYears(birth?: string, event?: string): number | null {
+  if (!birth || !event) return null;
+  const b = parseISO(birth);
+  const e = parseISO(event);
+  if (!b || !e) return null;
+  const months = monthsBetween(b, e);
+  if (months < 0) return null;
+  return Math.floor(months / 12);
+}
+
 /** Swedish age string: "<m> mån" if < 24 months, else "<y> år". */
 export function formatAge(birth?: string, event?: string): string | undefined {
   if (!birth || !event) return;

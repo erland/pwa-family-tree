@@ -1,217 +1,142 @@
-// Mocks must come before imports of the module under test
+// src/features/individuals/__tests__/useAddChildFlow.test.ts
 
-// 1. Mock store hooks so we can control selector output
-jest.mock("../../../store", () => ({
-  useAppSelector: jest.fn(),
+// --- Mocks must come first ---
+jest.mock("../useParentChildFlow", () => ({
+  useParentChildFlow: jest.fn(),
 }));
 
-// 2. Mock the lower-level hook that useAddChildFlow composes
-jest.mock("../useAddChild", () => ({
-  useAddChild: jest.fn(),
-}));
-
-// 3. Partially mock @core so we can:
-//    - control canAddParentChild (cycle detection / validity)
-//    - control IndividualSchema.safeParse (form validation)
-//    We keep the rest of @core's real exports intact.
-jest.mock("@core/domain", () => {
-  const actual = jest.requireActual("@core/domain");
-
-  return {
-    ...actual,
-
-    // mockable relationship rule used in useAddChildFlow.validateNoCycles
-    canAddParentChild: jest.fn(),
-
-    // mockable zod schema
-    IndividualSchema: {
-      safeParse: jest.fn(),
-    },
-  };
-});
-
-// Now import test utilities and the hook under test
-import { renderHook, act } from "@testing-library/react";
+// --- Imports after mocks ---
+import { renderHook } from "@testing-library/react";
 import { useAddChildFlow } from "../useAddChildFlow";
 
-// Grab the mocks we declared above
-const { useAppSelector } = require("../../../store") as {
-  useAppSelector: jest.Mock;
+const { useParentChildFlow } = require("../useParentChildFlow") as {
+  useParentChildFlow: jest.Mock;
 };
 
-const { useAddChild } = require("../useAddChild") as {
-  useAddChild: jest.Mock;
-};
-
-const {
-  canAddParentChild,
-  IndividualSchema,
-} = require("@core/domain") as {
-  canAddParentChild: jest.Mock;
-  IndividualSchema: { safeParse: jest.Mock };
-};
-
-
-describe("useAddChildFlow", () => {
-  let addExistingChild: jest.Mock;
-  let addNewChild: jest.Mock;
-  let canLink: jest.Mock;
-
+describe("useAddChildFlow (thin wrapper)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
 
-    // Default store shape; we invoke the selector with our fake state
-    const relationships = [
-      { id: "r1", type: "parent-child", parentIds: ["pA"], childId: "cA" },
-    ];
-    useAppSelector.mockImplementation((selector: any) =>
-      selector({
-        relationships: { items: relationships },
-        individuals: { items: [] },
-      })
-    );
+  test("exposes loading and error from parent-child flow", () => {
+    const linkExistingParents = jest.fn();
+    const createChildAndLink = jest.fn();
 
-    // Default relationship checks succeed
-    canAddParentChild.mockReturnValue({ ok: true });
+    useParentChildFlow.mockReturnValue({
+      loading: true,
+      error: "boom",
+      linkExistingParents,
+      createChildAndLink,
+    });
 
-    // Default lower-level hook behavior
-    addExistingChild = jest.fn().mockResolvedValue(undefined);
-    addNewChild = jest.fn().mockResolvedValue("child-1");
-    canLink = jest.fn().mockReturnValue(true);
+    const { result } = renderHook(() => useAddChildFlow());
+    expect(result.current.loading).toBe(true);
+    expect(result.current.error).toBe("boom");
+  });
 
-    useAddChild.mockReturnValue({
+  test("linkExisting delegates to linkExistingParents(childId, parentIds)", async () => {
+    const linkExistingParents = jest.fn().mockResolvedValue(undefined);
+    const createChildAndLink = jest.fn();
+
+    useParentChildFlow.mockReturnValue({
       loading: false,
       error: null,
-      canLink,
-      addExistingChild,
-      addNewChild,
+      linkExistingParents,
+      createChildAndLink,
     });
-
-    // Default schema success
-    IndividualSchema.safeParse.mockReturnValue({
-      success: true,
-      data: {
-        givenName: "New",
-        familyName: "Kid",
-        birthFamilyName: "",
-        dateOfBirth: "",
-        birthRegion: "",
-        birthCongregation: "",
-        birthCity: "",
-        dateOfDeath: "",
-        deathRegion: "",
-        deathCongregation: "",
-        deathCity: "",
-        gender: "unknown",
-        story: "",
-      },
-    });
-  });
-
-  test("linkExisting links only parents that pass canLink and cycle check", async () => {
-    // make p2 fail canLink; p1 passes
-    canLink.mockImplementation((pid: string) => pid === "p1");
 
     const { result } = renderHook(() => useAddChildFlow());
 
-    await act(async () => {
-      await result.current.linkExisting({ parentIds: ["p1", "p2"], childId: "c1" });
-    });
+    await result.current.linkExisting({ parentIds: ["p1", "p2"], childId: "c1" });
 
-    expect(addExistingChild).toHaveBeenCalledTimes(1);
-    expect(addExistingChild).toHaveBeenCalledWith("p1", "c1");
+    expect(linkExistingParents).toHaveBeenCalledTimes(1);
+    expect(linkExistingParents).toHaveBeenCalledWith("c1", ["p1", "p2"]);
   });
 
-  test("linkExisting throws when any parent would create a cycle", async () => {
-    canAddParentChild.mockImplementation((_, pid: string) =>
-      pid === "bad" ? { ok: false } : { ok: true }
-    );
+  test("createAndLink delegates to createChildAndLink(primaryParentId, form, otherParentId)", async () => {
+    const linkExistingParents = jest.fn();
+    const createChildAndLink = jest.fn().mockResolvedValue("child-123");
+
+    useParentChildFlow.mockReturnValue({
+      loading: false,
+      error: null,
+      linkExistingParents,
+      createChildAndLink,
+    });
 
     const { result } = renderHook(() => useAddChildFlow());
 
-    await act(async () => {
-      await expect(
-        result.current.linkExisting({ parentIds: ["p1", "bad"], childId: "c1" })
-      ).rejects.toThrow(/cykel/i);
+    const id = await result.current.createAndLink({
+      primaryParentId: "p1",
+      otherParentId: "p2",
+      form: { givenName: "Ada" },
     });
 
-    expect(addExistingChild).not.toHaveBeenCalled();
+    expect(createChildAndLink).toHaveBeenCalledTimes(1);
+    expect(createChildAndLink).toHaveBeenCalledWith("p1", { givenName: "Ada" }, "p2");
+    expect(id).toBe("child-123");
   });
 
-  test("createAndLink creates child and links only primary parent when no otherParentId", async () => {
-    const { result } = renderHook(() => useAddChildFlow());
+  test("returns memoized callbacks while deps are stable", () => {
+    const linkExistingParents = jest.fn();
+    const createChildAndLink = jest.fn();
 
-    await act(async () => {
-      await result.current.createAndLink({
-        primaryParentId: "p1",
-        form: { givenName: "New", familyName: "Kid" },
+    // First render with refs A
+    useParentChildFlow
+      .mockReturnValueOnce({
+        loading: false,
+        error: null,
+        linkExistingParents,
+        createChildAndLink,
+      })
+      // Second render with the SAME refs (deps unchanged)
+      .mockReturnValueOnce({
+        loading: false,
+        error: null,
+        linkExistingParents,
+        createChildAndLink,
       });
-    });
 
-    // ensure schema was used
-    expect(IndividualSchema.safeParse).toHaveBeenCalled();
+    const { result, rerender } = renderHook(() => useAddChildFlow());
 
-    // created child linked to primary parent
-    expect(addNewChild).toHaveBeenCalledWith(
-      "p1",
-      expect.objectContaining({ givenName: "New", familyName: "Kid" })
-    );
-    expect(addExistingChild).not.toHaveBeenCalled();
+    const first_linkExisting = result.current.linkExisting;
+    const first_createAndLink = result.current.createAndLink;
+
+    rerender();
+
+    expect(result.current.linkExisting).toBe(first_linkExisting);
+    expect(result.current.createAndLink).toBe(first_createAndLink);
   });
 
-  test("createAndLink links second parent when cycle check passes and canLink is true", async () => {
-    canLink.mockImplementation((pid: string) => pid !== "skip");
-    const { result } = renderHook(() => useAddChildFlow());
+  test("produces new memoized callbacks when deps change", () => {
+    const linkExistingParents_v1 = jest.fn();
+    const createChildAndLink_v1 = jest.fn();
 
-    await act(async () => {
-      await result.current.createAndLink({
-        primaryParentId: "p1",
-        otherParentId: "p2",
-        form: { givenName: "New" },
+    const linkExistingParents_v2 = jest.fn();
+    const createChildAndLink_v2 = jest.fn();
+
+    useParentChildFlow
+      .mockReturnValueOnce({
+        loading: false,
+        error: null,
+        linkExistingParents: linkExistingParents_v1,
+        createChildAndLink: createChildAndLink_v1,
+      })
+      .mockReturnValueOnce({
+        loading: false,
+        error: null,
+        linkExistingParents: linkExistingParents_v2, // changed dep
+        createChildAndLink: createChildAndLink_v2, // changed dep
       });
-    });
 
-    expect(addNewChild).toHaveBeenCalled();
-    expect(addExistingChild).toHaveBeenCalledWith("p2", "child-1");
-  });
+    const { result, rerender } = renderHook(() => useAddChildFlow());
 
-  test("createAndLink throws when schema fails before any creation", async () => {
-    IndividualSchema.safeParse.mockReturnValueOnce({ success: false });
+    const first_linkExisting = result.current.linkExisting;
+    const first_createAndLink = result.current.createAndLink;
 
-    const { result } = renderHook(() => useAddChildFlow());
+    rerender();
 
-    await act(async () => {
-      await expect(
-        result.current.createAndLink({
-          primaryParentId: "p1",
-          form: {},
-        })
-      ).rejects.toThrow(/uppgifter/i);
-    });
-
-    expect(addNewChild).not.toHaveBeenCalled();
-    expect(addExistingChild).not.toHaveBeenCalled();
-  });
-
-  test("createAndLink throws if second parent would create cycle (no rollback of initial link)", async () => {
-    // Primary creation ok; second parent invalid
-    canAddParentChild.mockImplementation((_, pid: string) =>
-      pid === "pBad" ? { ok: false } : { ok: true }
-    );
-
-    const { result } = renderHook(() => useAddChildFlow());
-
-    await act(async () => {
-      await expect(
-        result.current.createAndLink({
-          primaryParentId: "p1",
-          otherParentId: "pBad",
-          form: { givenName: "New" },
-        })
-      ).rejects.toThrow(/cykel/i);
-    });
-
-    expect(addNewChild).toHaveBeenCalledTimes(1);
-    expect(addExistingChild).not.toHaveBeenCalled();
+    expect(result.current.linkExisting).not.toBe(first_linkExisting);
+    expect(result.current.createAndLink).not.toBe(first_createAndLink);
   });
 });
