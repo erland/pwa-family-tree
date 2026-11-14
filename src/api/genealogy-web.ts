@@ -11,6 +11,7 @@ import {
   updateRelationship as updateRelationshipDB,
   deleteRelationship as deleteRelationshipDB,
   resetDatabase as resetDatabaseWeb,
+  mergeImportedData,
 } from "../storage";
 
 import type { Individual, Relationship } from "@core/domain";
@@ -30,7 +31,7 @@ import {
 
 // Ask user for a text file (.ged etc) and return its text, or null if cancelled
 async function pickTextFile(accept: string): Promise<string | null> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = accept;
@@ -40,8 +41,11 @@ async function pickTextFile(accept: string): Promise<string | null> {
         resolve(null);
         return;
       }
-      const text = await file.text();
-      resolve(text);
+      try {
+        resolve(await file.text());
+      } catch (error) {
+        reject(error);
+      }
     };
     input.click();
   });
@@ -59,8 +63,11 @@ async function pickBinaryFile(accept: string): Promise<ArrayBuffer | null> {
         resolve(null);
         return;
       }
-      const buf = await file.arrayBuffer();
-      resolve(buf);
+      try {
+        resolve(await file.arrayBuffer());
+      } catch (error) {
+        reject(error);
+      }
     };
     input.click();
   });
@@ -84,44 +91,6 @@ function triggerDownload(
   document.body.removeChild(a);
 
   URL.revokeObjectURL(url);
-}
-
-// Merge imported data into the local web DB
-async function bulkMergeImportedData(
-  newIndividuals: Individual[],
-  newRelationships: Relationship[]
-) {
-  // naive merge:
-  // - if ID already exists, update
-  // - otherwise add new
-  // mirrors your Electron import behavior
-
-  const existingInds = await getIndividuals();
-  const byInd = new Map(existingInds.map((i) => [i.id, i]));
-
-  for (const ind of newIndividuals) {
-    if (byInd.has(ind.id)) {
-      await updateIndividualDB(ind.id, ind);
-    } else {
-      await addIndividualDB(ind);
-    }
-  }
-
-  const existingRels = await getRelationships();
-  const byRel = new Map(existingRels.map((r) => [r.id, r]));
-
-  for (const rel of newRelationships) {
-    if (byRel.has(rel.id)) {
-      await updateRelationshipDB(rel.id, rel);
-    } else {
-      await addRelationshipDB(rel);
-    }
-  }
-
-  return {
-    count: newIndividuals.length,
-    relCount: newRelationships.length,
-  };
 }
 
 export const genealogyWebAPI = {
@@ -217,7 +186,7 @@ export const genealogyWebAPI = {
     const { individuals, relationships } = parseGedcomToData(text);
 
     // Merge into local storage
-    return bulkMergeImportedData(individuals, relationships);
+    return mergeImportedData(individuals, relationships);
   },
 
   //
@@ -283,6 +252,6 @@ export const genealogyWebAPI = {
     const { individuals, relationships } = await parseExcelData(arrayBuffer);
 
     // Merge into local storage
-    return bulkMergeImportedData(individuals, relationships);
+    return mergeImportedData(individuals, relationships);
   },
 };

@@ -13,6 +13,7 @@ import {
   Typography,
   IconButton,
   Divider,
+  ListSubheader,
 } from "@mui/material";
 
 import MenuIcon from "@mui/icons-material/Menu";
@@ -54,22 +55,25 @@ export default function AppLayout() {
   const navItems = [
     { to: "/", labelKey: "dashboard", icon: <DashboardIcon /> },
     { to: "/tree", labelKey: "tree", icon: <AccountTreeIcon /> },
-    { to: "/timeline", labelKey: "timeline", icon: <TimelineIcon /> },
     { to: "/individuals", labelKey: "individuals", icon: <PersonAddIcon /> },
     { to: "/relationships", labelKey: "relationships", icon: <FavoriteIcon /> },
+    { to: "/timeline", labelKey: "timeline", icon: <TimelineIcon /> },
     { to: "/places", labelKey: "places", icon: <LocationOnIcon /> },
     { to: "/ages", labelKey: "ages", icon: <BarChartIcon /> },
   ];
 
   function NavList() {
     return (
-      <List>
-        {navItems.map((item) => (
-          <ListItem key={item.to} disablePadding>
+      <List aria-label="Huvudnavigation">
+        {navItems.map((item, index) => (
+          <React.Fragment key={item.to}>
+          {(index === 0 || index === 4) && <ListSubheader disableSticky sx={{ bgcolor: "transparent", lineHeight: "32px" }}>{index === 0 ? "Utforska och redigera" : "Analys och översikter"}</ListSubheader>}
+          <ListItem disablePadding>
             <ListItemButton
               component={Link}
               to={item.to}
               selected={location.pathname === item.to}
+              aria-current={location.pathname === item.to ? "page" : undefined}
             >
               <ListItemIcon>{item.icon}</ListItemIcon>
               <ListItemText
@@ -77,6 +81,7 @@ export default function AppLayout() {
               />
             </ListItemButton>
           </ListItem>
+          </React.Fragment>
         ))}
       </List>
     );
